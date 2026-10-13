@@ -1,0 +1,59 @@
+name: Build TaskFlow Android APK
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate platform scaffolding if needed
+        shell: bash
+        run: |
+          if [ ! -f android/gradlew ] || [ ! -f android/gradle/wrapper/gradle-wrapper.jar ]; then
+            flutter create --platforms=android --org com.taskflow --project-name taskflow /tmp/taskflow-platform
+            rm -rf android
+            cp -a /tmp/taskflow-platform/android ./android
+            sed -i 's/applicationId = "com.taskflow.taskflow"/applicationId = "com.taskflow.app"/' android/app/build.gradle.kts
+            sed -i 's/namespace = "com.taskflow.taskflow"/namespace = "com.taskflow.app"/' android/app/build.gradle.kts
+            mkdir -p android/app/src/main/kotlin/com/taskflow/app
+            cat > android/app/src/main/kotlin/com/taskflow/app/MainActivity.kt <<'EOF'
+          package com.taskflow.app
+          import io.flutter.embedding.android.FlutterActivity
+          class MainActivity : FlutterActivity()
+          EOF
+            rm -rf android/app/src/main/kotlin/com/taskflow/taskflow
+          fi
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Analyze
+        run: flutter analyze
+      - name: Test
+        run: flutter test
+      - name: Build release APK
+        run: flutter build apk --release
+      - name: Verify APK exists
+        run: test -s build/app/outputs/flutter-apk/app-release.apk
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TaskFlow-Android-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
