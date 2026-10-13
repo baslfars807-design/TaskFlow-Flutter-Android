@@ -1,0 +1,3 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:taskflow/models/task.dart';
+void main(){test('task map round trip preserves fields',(){final task=TaskItem(id:4,title:'Read',description:'Chapter 2',notes:'At home',category:'Study',priority:2,completed:true,createdAt:DateTime(2026,1,2,12));final decoded=TaskItem.fromMap(task.toMap());expect(decoded.title,'Read');expect(decoded.priority,2);expect(decoded.completed,true);expect(decoded.category,'Study');});test('copyWith toggles completion without changing title',(){final t=TaskItem(title:'Call',createdAt:DateTime(2026));final done=t.copyWith(completed:true);expect(done.completed,true);expect(done.title,'Call');});}
